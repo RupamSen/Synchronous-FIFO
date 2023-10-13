@@ -1,0 +1,53 @@
+// Design Module of Synchronous FIFO
+module sync_fifo (input clk, rst, wr_en, rd_en, input [7:0] buf_in,
+                  output reg [7:0] buf_out, output reg [6:0] counter,
+                  output reg empty, full);
+  
+  reg [5:0] rd_ptr, wr_ptr;
+  
+  reg [7:0] buf_mem [63:0];
+  
+  //Update the status flags
+  always @(counter) begin
+    empty = (counter == 0);
+    full = (counter == 64);
+  end
+  
+  //Set the FIFO counter
+  always @(posedge clk, posedge rst) begin
+    if (rst)	counter <= 0;
+    else if ((!full && wr_en) && (!empty && rd_en))
+      			counter <= counter;
+    else if (!full && wr_en) 
+      			counter <= counter + 1;
+    else if (!empty && rd_en)
+      			counter <= counter - 1;
+    else	counter <= counter;
+  end
+  
+  //Fetch the data from FIFO
+  always @(posedge clk, posedge rst) begin
+    if (rst)	buf_out <= 0;
+    else if (!empty && rd_en)	buf_out <= buf_mem [rd_ptr];
+    else		buf_out <= buf_out;
+  end
+  
+  //Writing Data into FIFO
+  always @(posedge clk) begin
+    if (!full && wr_en) buf_mem[wr_ptr] <= buf_in;
+    else 				buf_mem[wr_ptr] <= buf_mem[wr_ptr];
+  end
+  
+  //Manage the Pointers
+  always @(posedge clk, posedge rst) begin
+    if (rst) begin
+      wr_ptr <= 0; rd_ptr <= 0;
+    end
+    else if (!empty && rd_en)	rd_ptr <= rd_ptr + 1;
+    else if (!full && wr_en)	wr_ptr <= wr_ptr + 1;
+    else begin
+      wr_ptr <= wr_ptr; rd_ptr <= rd_ptr;
+    end
+  end
+  
+endmodule
